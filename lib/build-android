@@ -127,15 +127,15 @@ build_release() {
 
     local apk="$(find . -name '*-release-*.apk')"
 
-    if [[ $ANDROID_KEYSTORE ]]; then
+    if [[ $APP_ANDROID_KEYSTORE ]]; then
         local app_name="$(basename "$apk" '.apk' | perl -pe 's/(.*?)-release.*/\1/')"
 
         jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
-        -keystore "$ANDROID_KEYSTORE" \
-        -keypass "$ANDROID_KEYSTORE_KEYPASS" \
-        -storepass "$ANDROID_KEYSTORE_STOREPASS" \
+        -keystore "$APP_ANDROID_KEYSTORE" \
+        -keypass "$APP_ANDROID_KEYPASS" \
+        -storepass "$APP_ANDROID_STOREPASS" \
         "$apk" \
-        "$ANDROID_KEYSTORE_ALIAS"
+        "$APP_ANDROID_ALIAS"
 
         jarsigner -verify -verbose -certs "$apk"
 
