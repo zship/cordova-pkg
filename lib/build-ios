@@ -1,0 +1,117 @@
+#!/bin/bash
+
+_dirname="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+
+main() {
+    set -ex
+
+    pushd "$BUILD_DIR"
+    cordova platform add ios
+
+    copy_assets
+
+    case $MODE in
+    debug)
+        build_debug
+        ;;
+    release)
+        build_release
+        ;;
+    esac
+}
+
+
+copy_assets() {
+    set +e
+    pushd "$BUILD_DIR"
+
+    local dest="platforms/ios/$APP_NAME/Resources/icons"
+    cp icons/29.png "$dest/icon-small.png"
+    cp icons/58.png "$dest/icon-small@2x.png"
+    cp icons/40.png "$dest/icon-40.png"
+    cp icons/80.png "$dest/icon-40@2x.png"
+    cp icons/50.png "$dest/icon-50.png"
+    cp icons/100.png "$dest/icon-50@2x.png"
+    cp icons/57.png "$dest/icon.png"
+    cp icons/114.png "$dest/icon@2x.png"
+    cp icons/60.png "$dest/icon-60.png"
+    cp icons/120.png "$dest/icon-60@2x.png"
+    cp icons/72.png "$dest/icon-72.png"
+    cp icons/144.png "$dest/icon-72@2x.png"
+    cp icons/76.png "$dest/icon-76.png"
+    cp icons/152.png "$dest/icon-76@2x.png"
+
+    local dest="platforms/ios/$APP_NAME/Resources/splash"
+    cp splash/640x1136.png "$dest/Default-568h@2x~iphone.png"
+    cp splash/2048x1536.png "$dest/Default-Landscape@2x~ipad.png"
+    cp splash/1024x768.png "$dest/Default-Landscape~ipad.png"
+    cp splash/1536x2048.png "$dest/Default-Portrait@2x~ipad.png"
+    cp splash/768x1024.png "$dest/Default-Portrait~ipad.png"
+    cp splash/640x960.png "$dest/Default@2x~iphone.png"
+    cp splash/320x480.png "$dest/Default~iphone.png"
+
+    popd
+    set -e
+}
+
+
+build_debug() {
+    pushd "$BUILD_DIR"
+
+    ./platforms/ios/cordova/build --device
+    local appdir="$(find "$BUILD_DIR/platforms/ios" -name '*.app' | grep "$APP_NAME")"
+    if [[ ! $appdir ]]; then
+        exit 1
+    fi
+
+    mkdir -p "$OUT_DIR"
+    rm -Rf "$OUT_DIR/"$(basename "$appdir")""
+    cp -a "$appdir" "$OUT_DIR/"
+
+    echo "----------------------------------------------------------"
+    printf ".app/ result: %s/%s\n" "$OUT_DIR" "$(basename "$appdir")"
+    echo "----------------------------------------------------------"
+
+    popd
+}
+
+
+build_release() {
+    set -ex
+
+    pushd "$BUILD_DIR/platforms/ios"
+
+    local build_dir="$(pwd)/build"
+    mkdir -p "$build_dir"
+
+    local xcodeproj="$(find "$BUILD_DIR/platforms/ios" -name '*.xcodeproj' | grep "$APP_NAME")"
+
+    xcodebuild \
+    -project "$xcodeproj" \
+    -configuration Debug \
+    -sdk iphoneos \
+    CODE_SIGN_IDENTITY="$APP_IOS_IDENTITY" \
+    CONFIGURATION_BUILD_DIR="$build_dir" \
+    clean build
+
+    xcrun \
+    -sdk iphoneos \
+    PackageApplication \
+    -v "$build_dir/$APP_NAME.app" \
+    -o "$build_dir/$APP_NAME.ipa" \
+    --sign "$APP_IOS_IDENTITY" \
+    --embed "$APP_IOS_PROVISIONING_PROFILE"
+
+    mkdir -p "$OUT_DIR"
+    cp "$build_dir/$APP_NAME.ipa" "$OUT_DIR/"
+
+    echo "----------------------------------------------------------"
+    printf ".ipa result: %s/%s.ipa\n" "$OUT_DIR" "$APP_NAME.ipa"
+    echo "----------------------------------------------------------"
+
+    popd
+}
+
+
+main "$@"

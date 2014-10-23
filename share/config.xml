@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="%APP_ID%" version="%APP_VERSION%" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+	<name>%APP_NAME%</name>
+	<description>
+		A sample Apache Cordova application that responds to the deviceready event.
+	</description>
+	<author email="dev@cordova.apache.org" href="http://cordova.io">
+		Apache Cordova Team
+	</author>
+	<content src="%APP_URL%" />
+	<access origin="*" />
+
+	<preference name="Fullscreen" value="false" />
+	<preference name="webviewbounce" value="false" />
+	<preference name="DisallowOverscroll" value="true" />
+	<preference name="HideKeyboardFormAccessoryBar" value="true" />
+	<preference name="AutoHideSplashScreen" value="false" />
+	<preference name="ShowSplashScreenSpinner" value="false" />
+	<preference name="KeyboardDisplayRequiresUserAction" value="false" />
+	<preference name="android-windowSoftInputMode" value="stateVisible|adjustResize" />
+</widget>

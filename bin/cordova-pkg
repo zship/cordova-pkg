@@ -1,0 +1,106 @@
+#!/bin/bash
+
+
+_progname="$(basename "${BASH_SOURCE[0]}")"
+_dirname="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+_libdir="$( cd "$_dirname/../lib" && pwd )"
+_sharedir="$( cd "$_dirname/../share" && pwd )"
+
+_cordovadir="$( cd "$_dirname" && npm ls --parseable cordova )/bin"
+export PATH="$_cordovadir:$PATH"
+
+
+abspath() {
+    local file="$1"
+    echo "$(cd "$(dirname "$file")" && pwd)/$(basename "$file")"
+}
+
+
+main() {
+    set -e
+
+    local args=''
+    args="$(python "$_dirname/../lib/parse_opts.py" "$_progname" "$@")"
+    eval "$args"
+
+    args="$(node "$_libdir/parse_config.js" "cordova-pkg.json")"
+    eval "$args"
+
+    set -x
+
+    if [[ ! $BUILD_DIR ]]; then BUILD_DIR="$(pwd)/cordova-pkg-build"; fi
+    if [[ ! $OUT_DIR ]]; then OUT_DIR="$(pwd)/cordova-pkg-out"; fi
+    if [[ ! $APP_URL ]]; then APP_URL='/index.html'; fi
+
+    WWW_DIR="$(abspath $WWW_DIR)"
+    BUILD_DIR="$(abspath $BUILD_DIR)"
+    OUT_DIR="$(abspath $OUT_DIR)"
+
+    if [[ $APP_ANDROID_KEYSTORE ]]; then APP_ANDROID_KEYSTORE="$(abspath "$APP_ANDROID_KEYSTORE")"; fi
+    if [[ $APP_IOS_PROVISIONING_PROFILE ]]; then APP_IOS_PROVISIONING_PROFILE="$(abspath "$APP_IOS_PROVISIONING_PROFILE")"; fi
+
+    if [[ ! $PLATFORM ]]; then
+        echo "No --platform specified. Try 'ios' or 'android'" 2>&1
+        exit 1
+    fi
+
+    make_skeleton
+
+    case $PLATFORM in
+      android)
+        "$_libdir/build-android"
+        ;;
+      ios)
+        "$_libdir/build-ios"
+        ;;
+      *)
+        echo "No --platform specified. Try 'ios' or 'android'"
+    esac
+}
+
+
+make_skeleton() {
+    rm -Rf "$BUILD_DIR"
+    cordova create "$BUILD_DIR"
+
+    rm -Rf "$BUILD_DIR/www"
+    cp -a "$WWW_DIR" "$BUILD_DIR/www"
+
+    local searchpath="$(pwd)"
+    pushd "$BUILD_DIR"
+
+    IFS=':'
+    for plugin in $APP_PLUGINS; do
+        if [[ -d $searchpath/$plugin ]]; then
+            plugin="$(abspath "$searchpath/$plugin")"
+        fi
+        cordova plugin add "$plugin"
+    done
+
+    popd
+    mkdir -p "$BUILD_DIR/icons"
+
+    for icon in $APP_ICONS; do
+        local size="$(echo $icon | cut -d '|' -f 1)"
+        local src="$(echo $icon | cut -d '|' -f 2)"
+        cp "$src" "$BUILD_DIR/icons/$size.png"
+    done
+
+    mkdir -p "$BUILD_DIR/splash"
+
+    for splash in $APP_SPLASH; do
+        local size="$(echo $splash | cut -d '|' -f 1)"
+        local src="$(echo $splash | cut -d '|' -f 2)"
+        cp "$src" "$BUILD_DIR/splash/$size.png"
+    done
+
+    cat "$_sharedir/config.xml" \
+    | sed "s,%APP_ID%,$APP_ID," \
+    | sed "s,%APP_NAME%,$APP_NAME," \
+    | sed "s,%APP_VERSION%,$APP_VERSION," \
+    | sed "s,%APP_URL%,$APP_URL," \
+    > "$BUILD_DIR/config.xml"
+}
+
+
+time main "$@"

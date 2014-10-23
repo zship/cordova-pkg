@@ -1,0 +1,158 @@
+#!/bin/bash
+
+_dirname="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+
+if [[ ! $ANDROID_SDK ]]; then
+  android_bin="$(which android)"
+  if [[ ! $android_bin ]]; then
+    printf 'No ANDROID_SDK environment variable set and no `android` binary on the PATH!\n' 1>&2
+    exit 1
+  fi
+  export ANDROID_SDK="$(cd "$(dirname "$android_bin")/.."; pwd)"
+fi
+
+export PATH="$PATH:$ANDROID_SDK/tools:$ANDROID_SDK/platform_tools"
+
+
+main() {
+    set -ex
+
+    pushd "$BUILD_DIR"
+    cordova platform add android
+    popd
+
+    if [[ $EMBED_CROSSWALK ]]; then
+        get_crosswalk
+        setup_crosswalk
+    fi
+
+    copy_assets
+
+    case $MODE in
+    debug)
+        build_debug
+        ;;
+    release)
+        build_release
+        ;;
+    esac
+}
+
+
+get_crosswalk() {
+    mkdir -p "$HOME/.cordova-pkg/crosswalk"
+    pushd "$HOME/.cordova-pkg/crosswalk"
+
+    rm -Rf ./crosswalk
+
+    local filename="$(echo "$EMBED_CROSSWALK" | perl -pe 's/.*\/(.*)$/\1/' )"
+    if [[ ! -e $filename ]]; then
+        echo "Downloading Crosswalk..."
+        curl -LO "$EMBED_CROSSWALK"
+    else
+        echo "Desired Crosswalk version already exists. Using that!"
+    fi
+
+    mkdir crosswalk
+    unzip "$filename" -d ./crosswalk
+    popd
+}
+
+
+setup_crosswalk() {
+  set -ex
+
+  # https://crosswalk-project.org/#documentation/cordova/migrate_an_application
+  pushd "$BUILD_DIR/platforms/android"
+
+  rm -Rf CordovaLib/*
+
+  local crosswalk="$(find "$HOME/.cordova-pkg/crosswalk/crosswalk" -mindepth 1 -maxdepth 1 -type d)"
+  cp -a "$crosswalk/framework"/* -t ./CordovaLib/
+  cp "$crosswalk/VERSION" ./VERSION
+
+  pushd CordovaLib
+  android update project --subprojects --path .
+  ant debug
+  popd
+
+  popd
+
+  pushd "$BUILD_DIR"
+  local crosswalk_plugin="$(cd "$_dirname/../share/plugins/crosswalk.config" && pwd)"
+  cordova plugin add "$crosswalk_plugin"
+  popd
+}
+
+
+copy_assets() {
+    set +e
+    pushd "$BUILD_DIR"
+
+    local dest="platforms/android/res"
+    cp icons/36.png "$dest/drawable-ldpi/icon.png"
+    cp icons/48.png "$dest/drawable-mdpi/icon.png"
+    cp icons/72.png "$dest/drawable-hdpi/icon.png"
+    cp icons/96.png "$dest/drawable-xhdpi/icon.png"
+
+    popd
+    set -e
+}
+
+
+build_debug() {
+    set -ex
+
+    pushd "$BUILD_DIR/platforms/android"
+
+    cordova build android --debug
+    local apk="$(find . -name '*-debug-*.apk')"
+    mv "$apk" "$OUT_DIR/"
+
+    echo "----------------------------------------------------------"
+    printf ".apk result: %s/%s\n" "$OUT_DIR" "$(basename "$apk")"
+    echo "----------------------------------------------------------"
+
+    popd
+}
+
+
+build_release() {
+    set -ex
+
+    pushd "$BUILD_DIR/platforms/android"
+
+    cordova build android --release
+
+    local apk="$(find . -name '*-release-*.apk')"
+
+    if [[ $ANDROID_KEYSTORE ]]; then
+        local app_name="$(basename "$apk" '.apk' | perl -pe 's/(.*?)-release.*/\1/')"
+
+        jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
+        -keystore "$ANDROID_KEYSTORE" \
+        -keypass "$ANDROID_KEYSTORE_KEYPASS" \
+        -storepass "$ANDROID_KEYSTORE_STOREPASS" \
+        "$apk" \
+        "$ANDROID_KEYSTORE_ALIAS"
+
+        jarsigner -verify -verbose -certs "$apk"
+
+        local zipalign="$(find "$ANDROID_SDK" -name zipalign | head -1)"
+        "$zipalign" -v 4 "$apk" "$app_name.apk"
+        rm "$apk"
+        apk="$app_name.apk"
+    fi
+
+    mv "$apk" "$OUT_DIR/"
+
+    echo "----------------------------------------------------------"
+    printf ".apk result: %s/%s\n" "$OUT_DIR" "$(basename "$apk")"
+    echo "----------------------------------------------------------"
+
+    popd
+}
+
+
+main "$@"
