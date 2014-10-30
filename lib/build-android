@@ -66,10 +66,10 @@ setup_crosswalk() {
   # https://crosswalk-project.org/#documentation/cordova/migrate_an_application
   pushd "$BUILD_DIR/platforms/android"
 
-  rm -Rf CordovaLib/*
+  rm -Rf ./CordovaLib
 
   local crosswalk="$(find "$HOME/.cordova-pkg/crosswalk/crosswalk" -mindepth 1 -maxdepth 1 -type d)"
-  cp -a "$crosswalk/framework"/* -t ./CordovaLib/
+  cp -a "$crosswalk/framework" ./CordovaLib
   cp "$crosswalk/VERSION" ./VERSION
 
   pushd CordovaLib
