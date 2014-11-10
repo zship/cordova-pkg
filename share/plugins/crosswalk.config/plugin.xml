@@ -1,8 +1,5 @@
-<!-- This file is for application- and platform-specific config which cannot be
-  expressed in Cordova's config.xml -->
-<!-- It will be copied to the build/plugins/app.config/ directory (as a plugin) -->
 <?xml version="1.0" encoding="UTF-8"?>
-<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android" id="app.config" version="1.0.0">
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android" id="crosswalk.config" version="1.0.0">
 	<engines>
 		<engine name="cordova" version=">=3.0.0" />
 	</engines>
