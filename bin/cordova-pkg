@@ -69,7 +69,7 @@ make_skeleton() {
     local searchpath="$(pwd)"
     pushd "$BUILD_DIR"
 
-    IFS=':'
+    IFS='|'
     for plugin in $APP_PLUGINS; do
         if [[ -d $searchpath/$plugin ]]; then
             plugin="$(abspath "$searchpath/$plugin")"
@@ -80,6 +80,7 @@ make_skeleton() {
     popd
     mkdir -p "$BUILD_DIR/icons"
 
+    IFS=':'
     for icon in $APP_ICONS; do
         local size="$(echo $icon | cut -d '|' -f 1)"
         local src="$(echo $icon | cut -d '|' -f 2)"
