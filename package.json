@@ -1,6 +1,6 @@
 {
 	"name": "cordova-pkg",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"description": "Produce Cordova .ipa and .apk packages from your html/js/css in one step.",
 	"dependencies": {
 		"cordova": "3.5.0-0.2.7"

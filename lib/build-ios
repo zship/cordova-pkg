@@ -92,6 +92,7 @@ build_release() {
     -configuration Debug \
     -sdk iphoneos \
     CODE_SIGN_IDENTITY="$APP_IOS_IDENTITY" \
+    CODE_SIGN_RESOURCE_RULES_PATH='$(SDKROOT)/ResourceRules.plist' \
     CONFIGURATION_BUILD_DIR="$build_dir" \
     clean build
 
