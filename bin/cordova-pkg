@@ -100,6 +100,8 @@ make_skeleton() {
     | sed "s,%APP_NAME%,$APP_NAME," \
     | sed "s,%APP_VERSION%,$APP_VERSION," \
     | sed "s,%APP_URL%,$APP_URL," \
+    | sed "s,%APP_IOS_BUILD_NUMBER%,$APP_IOS_BUILD_NUMBER," \
+    | sed "s,%APP_ANDROID_BUILD_NUMBER%,$APP_ANDROID_BUILD_NUMBER," \
     > "$BUILD_DIR/config.xml"
 }
 
